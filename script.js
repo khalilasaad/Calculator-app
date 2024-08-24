@@ -5,6 +5,8 @@ const resetBtn = document.getElementById('reset');
 const equalBtn = document.getElementById('equal');
 
 const input = [];
+const temp = [];
+let result = null;
 
 function updateTheme() {
 	if (document.body.classList.contains('theme-3')) {
@@ -21,123 +23,125 @@ function updateTheme() {
 	}
 }
 
-function updateScreen() {
-	screenInput = input.join('');
-	screen.innerText = screenInput;
+function updateScreen(btnText) {
+	if (btnText === 'del') {
+		screen.innerText = screen.innerText.toString().slice(0, -1);
+	} else if (btnText === 'reset') {
+		screen.innerText = '';
+	} else {
+		screen.innerText = screen.innerText.toString() + btnText.toString();
+	}
 }
 
-function displayInput(btn) {
-	last = input[input.length - 1];
-
+function storeInput(btn) {
 	if (
 		input.length === 21 ||
-		(['+', '-', '/', 'x'].includes(last) &&
-			['+', '-', '/', 'x'].includes(btn.innerText)) ||
-		(input.length === 0 && ['+', '-', '/', 'x'].includes(btn.innerText))
+		(temp.length === 0 && ['+', '-', '/', 'x'].includes(btn.innerText))
 	) {
 		return;
-	} else if (last === 'Math Error') {
+	} else if (temp.includes('.') && btn.innerText === '.') {
+		return;
+	} else if (result !== null) {
+		result = null;
 		resetInput();
 	}
-	input.push(btn.innerText);
-	updateScreen();
+
+	if (['+', '-', '/', 'x'].includes(btn.innerText)) {
+		input.push(temp.join(''));
+		temp.length = 0;
+		input.push(btn.innerText);
+	} else {
+		temp.push(btn.innerText);
+	}
+
+	updateScreen(btn.innerText);
 }
 
 function resetInput() {
 	input.length = 0;
-	updateScreen();
+	temp.length = 0;
+	updateScreen('reset');
 }
 
 function deleteInput() {
-	input.pop();
-	updateScreen();
+	if (temp.length === 0) {
+		input.pop();
+	} else {
+		temp.pop();
+	}
+
+	updateScreen('del');
 }
 
 function calculate() {
-	last = input[input.length - 1];
-
-	if (
-		['+', '-', '/', 'x'].includes(last) ||
-		(input[input.length - 2] === '/' && last === '0')
-	) {
-		resetInput();
-		input.push('Math Error');
-		updateScreen();
-		return;
+	if (temp.length === 0 || input.length === 0) {
+		{
+			return;
+		}
+	} else {
+		input.push(temp.join(''));
+		temp.length = 0;
 	}
 
-	if (input.length === 1) {
-		return;
+	for (let i = 0; i < input.length; i++) {
+		if (input[i] === '/' && parseFloat(input[i + 1]) === 0) {
+			result = 'Cant divide by zero';
+			screen.innerText = result;
+			return;
+		}
 	}
 
-	newInput = [];
-	temp = [];
-	input.forEach((x, index) => {
-		if (['+', '-', '/', 'x'].includes(x)) {
-			newInput.push(temp.join(''));
-			newInput.push(x);
-			temp.length = 0;
-		} else {
-			temp.push(x);
-		}
-		if (input.length - 1 === index) {
-			newInput.push(temp.join(''));
-			temp.length = 0;
-		}
-	});
-
-	const strongOperatorsIndex = newInput
+	const strongOperatorsIndex = input
 		.map((operator, index) => ({ operator, index }))
 		.filter(({ operator }) => operator === '/' || operator === 'x')
 		.map(({ index }) => index);
 
-	const weakoperatoratorsIndex = newInput
+	const weakoperatoratorsIndex = input
 		.map((operator, index) => ({ operator, index }))
 		.filter(({ operator }) => operator === '+' || operator === '-')
 		.map(({ index }) => index);
 
-	let result;
 	// first calculation
 	for (let i = 0; i < strongOperatorsIndex.length; i++) {
-		if (newInput[strongOperatorsIndex[i]] === '/') {
+		if (input[strongOperatorsIndex[i]] === '/') {
 			result =
-				parseFloat(newInput[strongOperatorsIndex[i] - 1]) /
-				parseFloat(newInput[strongOperatorsIndex[i] + 1]);
-			newInput[strongOperatorsIndex[i]] =
-				newInput[strongOperatorsIndex[i] - 1] =
-				newInput[strongOperatorsIndex[i] + 1] =
+				parseFloat(input[strongOperatorsIndex[i] - 1]) /
+				parseFloat(input[strongOperatorsIndex[i] + 1]);
+			input[strongOperatorsIndex[i]] =
+				input[strongOperatorsIndex[i] - 1] =
+				input[strongOperatorsIndex[i] + 1] =
 					result;
 		} else {
 			result =
-				parseFloat(newInput[strongOperatorsIndex[i] - 1]) *
-				parseFloat(newInput[strongOperatorsIndex[i] + 1]);
-			newInput[strongOperatorsIndex[i]] =
-				newInput[strongOperatorsIndex[i] - 1] =
-				newInput[strongOperatorsIndex[i] + 1] =
+				parseFloat(input[strongOperatorsIndex[i] - 1]) *
+				parseFloat(input[strongOperatorsIndex[i] + 1]);
+			input[strongOperatorsIndex[i]] =
+				input[strongOperatorsIndex[i] - 1] =
+				input[strongOperatorsIndex[i] + 1] =
 					result;
 		}
 	}
 
+	// second calculation
 	for (let i = 0; i < weakoperatoratorsIndex.length; i++) {
-		if (newInput[weakoperatoratorsIndex[i]] === '+') {
+		if (input[weakoperatoratorsIndex[i]] === '+') {
 			result =
-				parseFloat(newInput[weakoperatoratorsIndex[i] - 1]) +
-				parseFloat(newInput[weakoperatoratorsIndex[i] + 1]);
-			newInput[weakoperatoratorsIndex[i]] =
-				newInput[weakoperatoratorsIndex[i] - 1] =
-				newInput[weakoperatoratorsIndex[i] + 1] =
+				parseFloat(input[weakoperatoratorsIndex[i] - 1]) +
+				parseFloat(input[weakoperatoratorsIndex[i] + 1]);
+			input[weakoperatoratorsIndex[i]] =
+				input[weakoperatoratorsIndex[i] - 1] =
+				input[weakoperatoratorsIndex[i] + 1] =
 					result;
 		} else {
 			result =
-				parseFloat(newInput[weakoperatoratorsIndex[i] - 1]) -
-				parseFloat(newInput[weakoperatoratorsIndex[i] + 1]);
-			newInput[weakoperatoratorsIndex[i]] =
-				newInput[weakoperatoratorsIndex[i] - 1] =
-				newInput[weakoperatoratorsIndex[i] + 1] =
+				parseFloat(input[weakoperatoratorsIndex[i] - 1]) -
+				parseFloat(input[weakoperatoratorsIndex[i] + 1]);
+			input[weakoperatoratorsIndex[i]] =
+				input[weakoperatoratorsIndex[i] - 1] =
+				input[weakoperatoratorsIndex[i] + 1] =
 					result;
 		}
 	}
-	resetInput();
 	screen.innerText = result;
 }
 
@@ -145,7 +149,7 @@ document.querySelector('.theme-btn').addEventListener('click', updateTheme);
 
 inputBtns.forEach((btn) => {
 	btn.addEventListener('click', () => {
-		displayInput(btn);
+		storeInput(btn);
 	});
 });
 
